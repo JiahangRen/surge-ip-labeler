@@ -5,7 +5,7 @@
  */
 const $ = $substore;
 const CACHE_TTL = 24 * 60 * 60 * 1000;
-const EXIT_IP_URL = 'https://api.ipify.org';
+const EXIT_IP_URL = 'http://ip-api.com/json?fields=status,query';
 const INTEL_URL = 'https://ip.net.coffee/api/ip/lookup/';
 const concurrency = Math.min(10, Math.max(1, Number($arguments?.limit) || 5));
 
@@ -48,6 +48,16 @@ function parseIntel(body) {
   }
 }
 
+function parseExitIp(body) {
+  const text = String(body || '').trim();
+  try {
+    const parsed = JSON.parse(text);
+    return parsed?.status === 'success' && typeof parsed.query === 'string' ? parsed.query.trim() : '';
+  } catch {
+    return text;
+  }
+}
+
 async function operator(proxies = []) {
   if (!$.env.isSurge) throw new Error('此操作脚本仅适用于 Sub-Store 的 Surge-ability 模块');
 
@@ -73,13 +83,14 @@ async function operator(proxies = []) {
   async function inspect(proxy) {
     const original = proxy.name || '未命名节点';
     try {
-      const descriptor = ProxyUtils.produce([proxy], 'Surge')[0];
+      const descriptor = ProxyUtils.produce([proxy], 'Surge');
       const response = await $.http.get({
         url: EXIT_IP_URL,
+        node: descriptor,
         'policy-descriptor': descriptor,
         timeout: 10,
       });
-      const ip = String(response.body || '').trim();
+      const ip = parseExitIp(response.body);
       if (!ip) throw new Error('empty exit IP');
       proxy.name = label(original, ip, await getIntel(ip));
     } catch {

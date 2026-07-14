@@ -1,7 +1,7 @@
 import { formatLabel } from '../shared/policy.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const IP_ECHO_URL = 'https://api.ipify.org';
+const IP_ECHO_URL = 'http://ip-api.com/json?fields=status,query';
 const NET_COFFEE_URL = 'https://ip.net.coffee/api/ip/lookup/';
 
 function parseIntel(body) {
@@ -10,6 +10,16 @@ function parseIntel(body) {
     return intel && typeof intel === 'object' ? intel : {};
   } catch {
     return {};
+  }
+}
+
+function parseExitIp(body) {
+  const text = String(body || '').trim();
+  try {
+    const parsed = JSON.parse(text);
+    return parsed?.status === 'success' && typeof parsed.query === 'string' ? parsed.query.trim() : '';
+  } catch {
+    return text;
   }
 }
 
@@ -53,13 +63,14 @@ export function createSubStoreOperator({ httpGet, produce, cache, now = () => Da
     return mapLimit(proxies, concurrency, async (proxy) => {
       const originalName = String(proxy.name || '未命名节点');
       try {
-        const descriptor = produce([proxy])[0];
+        const descriptor = produce([proxy]);
         const response = await httpGet({
           url: IP_ECHO_URL,
+          node: descriptor,
           'policy-descriptor': descriptor,
           timeout: 10,
         });
-        const ip = String(response.body || '').trim();
+        const ip = parseExitIp(response.body);
         if (!ip) throw new Error('empty exit IP');
         proxy.name = formatLabel(originalName, ip, await getIntel(ip));
       } catch {

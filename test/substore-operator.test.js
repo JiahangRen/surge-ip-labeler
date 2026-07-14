@@ -11,7 +11,9 @@ test('labels Sub-Store proxies by querying each proxy exit and Net.Coffee', asyn
     now: () => 1_000,
     httpGet: async (options) => {
       calls.push(options);
-      if (options.url === 'https://api.ipify.org') return { body: '203.0.113.8' };
+      if (options.url === 'http://ip-api.com/json?fields=status,query') {
+        return { body: JSON.stringify({ status: 'success', query: '203.0.113.8' }) };
+      }
       if (options.url === 'https://ip.net.coffee/api/ip/lookup/203.0.113.8') {
         return { body: JSON.stringify({ trust_score: 92, native: true, isResidential: true, is_crawler: false }) };
       }
@@ -24,8 +26,9 @@ test('labels Sub-Store proxies by querying each proxy exit and Net.Coffee', asyn
 
   assert.equal(result[0].name, 'IPLC 香港 01 [203.0.113.8] | 🟢92 | 原生IP | 住宅 | 人类偏多');
   assert.deepEqual(calls[0], {
-    url: 'https://api.ipify.org',
-    'policy-descriptor': 'descriptor:IPLC 香港 01',
+    url: 'http://ip-api.com/json?fields=status,query',
+    node: ['descriptor:IPLC 香港 01'],
+    'policy-descriptor': ['descriptor:IPLC 香港 01'],
     timeout: 10,
   });
   assert.equal(calls.length, 2);
@@ -38,7 +41,9 @@ test('uses one cached intelligence lookup for duplicate exit IPs', async () => {
     cache: new Map(),
     now: () => 1_000,
     httpGet: async (options) => {
-      if (options.url === 'https://api.ipify.org') return { body: '203.0.113.8' };
+      if (options.url === 'http://ip-api.com/json?fields=status,query') {
+        return { body: JSON.stringify({ status: 'success', query: '203.0.113.8' }) };
+      }
       intelCalls += 1;
       return { body: JSON.stringify({ trust_score: 80 }) };
     },
