@@ -29,7 +29,7 @@ test('labels Sub-Store proxies by querying each proxy exit and Net.Coffee', asyn
     url: 'http://ip-api.com/json?fields=status,query',
     node: ['descriptor:IPLC 香港 01'],
     'policy-descriptor': ['descriptor:IPLC 香港 01'],
-    timeout: 10,
+    timeout: 10000,
   });
   assert.equal(calls.length, 2);
 });

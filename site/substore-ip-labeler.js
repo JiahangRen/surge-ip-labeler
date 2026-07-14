@@ -71,7 +71,7 @@ async function operator(proxies = []) {
       const key = `surge-ip-labeler:intel:${ip}`;
       const cached = cache.get(key);
       if (cached?.expiresAt > Date.now() && cached.intel) return cached.intel;
-      const response = await $.http.get({ url: `${INTEL_URL}${encodeURIComponent(ip)}`, timeout: 10 });
+      const response = await $.http.get({ url: `${INTEL_URL}${encodeURIComponent(ip)}`, timeout: 10000 });
       const intel = parseIntel(response.body);
       cache.set(key, { expiresAt: Date.now() + CACHE_TTL, intel });
       return intel;
@@ -88,7 +88,7 @@ async function operator(proxies = []) {
         url: EXIT_IP_URL,
         node: descriptor,
         'policy-descriptor': descriptor,
-        timeout: 10,
+        timeout: 10000,
       });
       const ip = parseExitIp(response.body);
       if (!ip) throw new Error('empty exit IP');

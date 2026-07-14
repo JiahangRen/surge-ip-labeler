@@ -50,7 +50,7 @@ export function createSubStoreOperator({ httpGet, produce, cache, now = () => Da
       const cached = cache.get(cacheKey);
       if (cached?.expiresAt > now() && cached.intel) return cached.intel;
 
-      const response = await httpGet({ url: `${NET_COFFEE_URL}${encodeURIComponent(ip)}`, timeout: 10 });
+      const response = await httpGet({ url: `${NET_COFFEE_URL}${encodeURIComponent(ip)}`, timeout: 10000 });
       const intel = parseIntel(response.body);
       cache.set(cacheKey, { expiresAt: now() + DAY_MS, intel });
       return intel;
@@ -68,7 +68,7 @@ export function createSubStoreOperator({ httpGet, produce, cache, now = () => Da
           url: IP_ECHO_URL,
           node: descriptor,
           'policy-descriptor': descriptor,
-          timeout: 10,
+          timeout: 10000,
         });
         const ip = parseExitIp(response.body);
         if (!ip) throw new Error('empty exit IP');
