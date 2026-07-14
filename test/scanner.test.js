@@ -78,7 +78,7 @@ test('uses the published Net.Coffee endpoint and uploads Worker-compatible summa
 
 test('skips all network activity until the next scheduled scan', async () => {
   const calls = [];
-  const cache = new Map([['nextScanAt', 1_000_001]]);
+  const cache = new Map([['nextScanAt:v2', 1_000_001]]);
   const result = await runScheduledScan(mockDeps({ cache, calls }));
 
   assert.deepEqual(result, { skipped: true });
@@ -89,7 +89,16 @@ test('sets the next actual scan six hours after a completed scan', async () => {
   const cache = new Map();
   await runScheduledScan(mockDeps({ cache }));
 
-  assert.equal(cache.get('nextScanAt'), 1_000_000 + 6 * 60 * 60 * 1000);
+  assert.equal(cache.get('nextScanAt:v2'), 1_000_000 + 6 * 60 * 60 * 1000);
+});
+
+test('retries a failed scan after five minutes instead of waiting six hours', async () => {
+  const cache = new Map();
+  const deps = mockDeps({ cache });
+  deps.fetch = async () => { throw new Error('unable to fetch source feed'); };
+
+  await assert.rejects(() => runScheduledScan(deps), /unable to fetch source feed/);
+  assert.equal(cache.get('nextScanAt:v2'), 1_000_000 + 5 * 60 * 1000);
 });
 
 test('converts scan failures into safe notification messages without secrets', () => {

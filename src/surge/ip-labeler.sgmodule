@@ -3,4 +3,4 @@
 #!arguments=configuration=REQUIRED_CONFIGURATION
 
 [Script]
-surge-ip-labeler = type=cron, cronexp="* * * * *", script-path=https://WORKER/surge-ip-labeler.js, timeout=300, script-update-interval=86400, argument="%configuration%"
+surge-ip-labeler = type=cron, cronexp="* * * * *", script-path=https://WORKER/surge-ip-labeler.js, timeout=900, script-update-interval=86400, argument="%configuration%"

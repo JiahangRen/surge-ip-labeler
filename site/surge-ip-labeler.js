@@ -72,6 +72,8 @@ function renderPolicyLine(node, label) {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+const RETRY_MS = 5 * 60 * 1000;
+const SCHEDULE_KEY = 'nextScanAt:v2';
 const IP_ECHO_URL = 'https://api.ipify.org';
 const NET_COFFEE_URL = 'https://ip.net.coffee/api/ip/lookup/';
 
@@ -190,13 +192,16 @@ async function runScan(dependencies) {
 
 async function runScheduledScan(dependencies) {
   const { store, now } = dependencies;
-  if (Number(store.get('nextScanAt')) > now()) return { skipped: true };
+  if (Number(store.get(SCHEDULE_KEY)) > now()) return { skipped: true };
 
   try {
     dependencies.onStart?.();
-    return await runScan(dependencies);
-  } finally {
-    store.set('nextScanAt', now() + SIX_HOURS_MS);
+    const result = await runScan(dependencies);
+    store.set(SCHEDULE_KEY, now() + SIX_HOURS_MS);
+    return result;
+  } catch (error) {
+    store.set(SCHEDULE_KEY, now() + RETRY_MS);
+    throw error;
   }
 }
 
