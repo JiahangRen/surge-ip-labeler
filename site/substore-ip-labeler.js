@@ -73,10 +73,9 @@ async function operator(proxies = []) {
   async function inspect(proxy) {
     const original = proxy.name || '未命名节点';
     try {
-      const descriptor = ProxyUtils.produce([proxy], 'Surge');
+      const descriptor = ProxyUtils.produce([proxy], 'Surge')[0];
       const response = await $.http.get({
         url: EXIT_IP_URL,
-        node: descriptor,
         'policy-descriptor': descriptor,
         timeout: 10,
       });

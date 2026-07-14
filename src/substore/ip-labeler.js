@@ -53,10 +53,9 @@ export function createSubStoreOperator({ httpGet, produce, cache, now = () => Da
     return mapLimit(proxies, concurrency, async (proxy) => {
       const originalName = String(proxy.name || '未命名节点');
       try {
-        const descriptor = produce([proxy]);
+        const descriptor = produce([proxy])[0];
         const response = await httpGet({
           url: IP_ECHO_URL,
-          node: descriptor,
           'policy-descriptor': descriptor,
           timeout: 10,
         });

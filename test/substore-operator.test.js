@@ -25,8 +25,7 @@ test('labels Sub-Store proxies by querying each proxy exit and Net.Coffee', asyn
   assert.equal(result[0].name, 'IPLC 香港 01 [203.0.113.8] | 🟢92 | 原生IP | 住宅 | 人类偏多');
   assert.deepEqual(calls[0], {
     url: 'https://api.ipify.org',
-    node: ['descriptor:IPLC 香港 01'],
-    'policy-descriptor': ['descriptor:IPLC 香港 01'],
+    'policy-descriptor': 'descriptor:IPLC 香港 01',
     timeout: 10,
   });
   assert.equal(calls.length, 2);
