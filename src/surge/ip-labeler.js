@@ -52,7 +52,7 @@ function isTimeout(error) {
 }
 
 async function lookupIntel(deps, ip) {
-  await deps.sleep(3000 + Math.floor(deps.random() * 1000));
+  await deps.sleep(500 + Math.floor(deps.random() * 250));
   return deps.fetch(`${NET_COFFEE_URL}${encodeURIComponent(ip)}`, { timeout: 10 });
 }
 

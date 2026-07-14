@@ -33,19 +33,19 @@ function mockDeps({ descriptors = ['a'], exitIps = ['1.1.1.1'], lookupStatus = 2
   };
 }
 
-test('queries each unique exit IP once, serially, and skips cached intelligence', async () => {
+test('queries each unique exit IP once, serially, with the fast scan delay and skips cached intelligence', async () => {
   const calls = [];
   const result = await runScan(mockDeps({ descriptors: ['a', 'b', 'c'], exitIps: ['1.1.1.1', '1.1.1.1', '2.2.2.2'], calls }));
 
   assert.equal(calls.filter((call) => typeof call === 'object' && call.url.includes('/api/ip/lookup/')).length, 2);
-  assert.deepEqual(calls.filter((call) => typeof call === 'string'), ['sleep:3000', 'sleep:3000']);
+  assert.deepEqual(calls.filter((call) => typeof call === 'string'), ['sleep:500', 'sleep:500']);
   assert.equal(result.lines.length, 3);
 
   const cachedCalls = [];
   const cache = new Map([['ip:1.1.1.1', { expiresAt: 1_100_000, intel: { trust_score: 90 } }]]);
   await runScan(mockDeps({ descriptors: ['a'], exitIps: ['1.1.1.1'], cache, calls: cachedCalls }));
   assert.equal(cachedCalls.filter((call) => typeof call === 'object' && call.url.includes('/api/ip/lookup/')).length, 0);
-  assert.equal(cachedCalls.includes('sleep:3000'), false);
+  assert.equal(cachedCalls.includes('sleep:500'), false);
 });
 
 test('uses policy descriptors for exit-IP discovery', async () => {

@@ -13,7 +13,7 @@ test('publishes a self-contained Surge module and script at the GitHub Pages URL
   ]);
 
   assert.match(moduleText, /^#!arguments=configuration=REQUIRED_CONFIGURATION$/m);
-  assert.match(moduleText, new RegExp(`^surge-ip-labeler = type=cron, cronexp="\\* \\* \\* \\* \\*", script-path=${baseUrl}/surge-ip-labeler\\.js\\?rev=9aa7c2e, timeout=900.*argument="%configuration%"`, 'm'));
+  assert.match(moduleText, new RegExp(`^surge-ip-labeler = type=cron, cronexp="\\* \\* \\* \\* \\*", script-path=${baseUrl}/surge-ip-labeler\\.js\\?rev=4e49cf2, timeout=900.*argument="%configuration%"`, 'm'));
   assert.doesNotMatch(moduleText, /type=generic/);
   assert.doesNotMatch(scriptText, /^import\s/m);
   assert.match(scriptText, /\$notification\.post\('Surge IP Labeler', '扫描失败', message\)/);
