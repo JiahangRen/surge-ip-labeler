@@ -28,6 +28,27 @@ test('rejects missing and wrong upload credentials', async () => {
   assert.equal(await env.POLICIES.get('current'), null);
 });
 
+test('rejects every upload when the sync secret is missing or empty', async () => {
+  const body = JSON.stringify({ content: 'Node = ss, host, 443', updatedAt: '2026-07-14T00:00:00Z', summary: { nodeCount: 1, failedCount: 0 } });
+
+  for (const syncToken of [undefined, '']) {
+    const env = makeEnv();
+    env.SYNC_TOKEN = syncToken;
+
+    assert.equal((await worker.fetch(request('/v1/snapshot', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer undefined', 'Content-Type': 'application/json' },
+      body,
+    }), env)).status, 401);
+    assert.equal((await worker.fetch(request('/v1/snapshot', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer sync-secret', 'Content-Type': 'application/json' },
+      body,
+    }), env)).status, 401);
+    assert.equal(await env.POLICIES.get('current'), null);
+  }
+});
+
 test('stores a valid snapshot and serves it only to a protected subscription request', async () => {
   const env = makeEnv();
   const content = 'Node = trojan, host, 443, password=redacted';

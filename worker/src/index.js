@@ -18,7 +18,7 @@ function validSnapshot(snapshot) {
 }
 
 async function storeSnapshot(request, env) {
-  if (request.headers.get('Authorization') !== `Bearer ${env.SYNC_TOKEN}`) return unauthorized();
+  if (!env.SYNC_TOKEN || request.headers.get('Authorization') !== `Bearer ${env.SYNC_TOKEN}`) return unauthorized();
 
   let snapshot;
   try {
