@@ -25,6 +25,13 @@ test('uses required score thresholds and unknown fallbacks', () => {
   assert.match(formatLabel('HK 01', null, {}), /IP:未知/);
 });
 
+test('uses unknown fallbacks when intelligence data is null', () => {
+  assert.equal(
+    formatLabel('HK 01', null, null),
+    'HK 01 [IP:未知] | 评分未知 | 原生未知 | 住宅未知 | 人类未知',
+  );
+});
+
 test('uses green, yellow, and red score bands without inventing a percentage', () => {
   assert.match(formatLabel('A', '1.1.1.1', { trust_score: 100 }), /🟢100/);
   assert.match(formatLabel('A', '1.1.1.1', { trust_score: 79 }), /🟡79/);

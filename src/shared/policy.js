@@ -65,10 +65,11 @@ export function parsePolicyFeed(text) {
 
 export function formatLabel(name, exitIp, intel = {}) {
   const ip = typeof exitIp === 'string' && exitIp.trim() ? exitIp.trim() : 'IP:未知';
-  const trustScore = getIntelValue(intel, 'trust_score', 'trustScore', 'score');
-  const native = getIntelValue(intel, 'native', 'is_native', 'isNative');
-  const residential = getIntelValue(intel, 'isResidential', 'is_residential', 'residential');
-  const crawler = getIntelValue(intel, 'is_crawler', 'isCrawler', 'crawler');
+  const intelData = intel !== null && typeof intel === 'object' ? intel : {};
+  const trustScore = getIntelValue(intelData, 'trust_score', 'trustScore', 'score');
+  const native = getIntelValue(intelData, 'native', 'is_native', 'isNative');
+  const residential = getIntelValue(intelData, 'isResidential', 'is_residential', 'residential');
+  const crawler = getIntelValue(intelData, 'is_crawler', 'isCrawler', 'crawler');
 
   return [
     `${sanitizeName(name)} [${ip}]`,
