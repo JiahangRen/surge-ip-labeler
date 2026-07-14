@@ -23,8 +23,8 @@ function parseExitIp(body) {
   }
 }
 
-function failedLabel(name) {
-  return `${name} [检测失败] | 评分未知 | 原生未知 | 住宅未知 | 人类未知`;
+function statusLabel(name, status) {
+  return `${name} [${status}] | 评分未知 | 原生未知 | 住宅未知 | 人类未知`;
 }
 
 async function mapLimit(items, limit, task) {
@@ -62,19 +62,41 @@ export function createSubStoreOperator({ httpGet, produce, cache, now = () => Da
   return async function operator(proxies = []) {
     return mapLimit(proxies, concurrency, async (proxy) => {
       const originalName = String(proxy.name || '未命名节点');
+      let descriptor;
       try {
-        const descriptor = produce([proxy]);
-        const response = await httpGet({
+        descriptor = produce([proxy]);
+      } catch {
+        proxy.name = statusLabel(originalName, '节点描述符失败');
+        return proxy;
+      }
+      if (!descriptor) {
+        proxy.name = statusLabel(originalName, '节点描述符失败');
+        return proxy;
+      }
+
+      let response;
+      try {
+        response = await httpGet({
           url: IP_ECHO_URL,
           node: descriptor,
           'policy-descriptor': descriptor,
           timeout: 10000,
         });
-        const ip = parseExitIp(response.body);
-        if (!ip) throw new Error('empty exit IP');
+      } catch {
+        proxy.name = statusLabel(originalName, '出口请求失败');
+        return proxy;
+      }
+
+      const ip = parseExitIp(response?.body);
+      if (!ip) {
+        proxy.name = statusLabel(originalName, '出口响应无IP');
+        return proxy;
+      }
+
+      try {
         proxy.name = formatLabel(originalName, ip, await getIntel(ip));
       } catch {
-        proxy.name = failedLabel(originalName);
+        proxy.name = formatLabel(originalName, ip, {});
       }
       return proxy;
     });

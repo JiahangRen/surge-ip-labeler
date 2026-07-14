@@ -52,3 +52,41 @@ test('uses one cached intelligence lookup for duplicate exit IPs', async () => {
   await operator([{ name: 'A' }, { name: 'B' }]);
   assert.equal(intelCalls, 1);
 });
+
+test('shows a safe exit-request failure marker instead of hiding the failure source', async () => {
+  const operator = createSubStoreOperator({
+    produce: () => ['descriptor:bad'],
+    cache: new Map(),
+    httpGet: async () => { throw new Error('secret proxy descriptor must not appear'); },
+  });
+
+  const [proxy] = await operator([{ name: '坏节点' }]);
+  assert.equal(proxy.name, '坏节点 [出口请求失败] | 评分未知 | 原生未知 | 住宅未知 | 人类未知');
+});
+
+test('shows a safe no-IP marker when the exit endpoint replies without an IP', async () => {
+  const operator = createSubStoreOperator({
+    produce: () => ['descriptor:ok'],
+    cache: new Map(),
+    httpGet: async () => ({ body: JSON.stringify({ status: 'fail' }) }),
+  });
+
+  const [proxy] = await operator([{ name: '无出口IP' }]);
+  assert.equal(proxy.name, '无出口IP [出口响应无IP] | 评分未知 | 原生未知 | 住宅未知 | 人类未知');
+});
+
+test('keeps the exit IP when only Net.Coffee fails', async () => {
+  const operator = createSubStoreOperator({
+    produce: () => ['descriptor:ok'],
+    cache: new Map(),
+    httpGet: async ({ url }) => {
+      if (url === 'http://ip-api.com/json?fields=status,query') {
+        return { body: JSON.stringify({ status: 'success', query: '203.0.113.9' }) };
+      }
+      throw new Error('Net.Coffee unavailable');
+    },
+  });
+
+  const [proxy] = await operator([{ name: '仅情报失败' }]);
+  assert.equal(proxy.name, '仅情报失败 [203.0.113.9] | 评分未知 | 原生未知 | 住宅未知 | 人类未知');
+});

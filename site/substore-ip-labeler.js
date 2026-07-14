@@ -35,8 +35,8 @@ function label(name, ip, intel) {
   ].join(' | ');
 }
 
-function failed(name) {
-  return `${String(name).replace(/[\r\n]+/g, ' ').replaceAll('=', '＝').trim()} [检测失败] | 评分未知 | 原生未知 | 住宅未知 | 人类未知`;
+function status(name, message) {
+  return `${String(name).replace(/[\r\n]+/g, ' ').replaceAll('=', '＝').trim()} [${message}] | 评分未知 | 原生未知 | 住宅未知 | 人类未知`;
 }
 
 function parseIntel(body) {
@@ -82,19 +82,41 @@ async function operator(proxies = []) {
 
   async function inspect(proxy) {
     const original = proxy.name || '未命名节点';
+    let descriptor;
     try {
-      const descriptor = ProxyUtils.produce([proxy], 'Surge');
-      const response = await $.http.get({
+      descriptor = ProxyUtils.produce([proxy], 'Surge');
+    } catch {
+      proxy.name = status(original, '节点描述符失败');
+      return proxy;
+    }
+    if (!descriptor) {
+      proxy.name = status(original, '节点描述符失败');
+      return proxy;
+    }
+
+    let response;
+    try {
+      response = await $.http.get({
         url: EXIT_IP_URL,
         node: descriptor,
         'policy-descriptor': descriptor,
         timeout: 10000,
       });
-      const ip = parseExitIp(response.body);
-      if (!ip) throw new Error('empty exit IP');
+    } catch {
+      proxy.name = status(original, '出口请求失败');
+      return proxy;
+    }
+
+    const ip = parseExitIp(response?.body);
+    if (!ip) {
+      proxy.name = status(original, '出口响应无IP');
+      return proxy;
+    }
+
+    try {
       proxy.name = label(original, ip, await getIntel(ip));
     } catch {
-      proxy.name = failed(original);
+      proxy.name = label(original, ip, {});
     }
     return proxy;
   }
