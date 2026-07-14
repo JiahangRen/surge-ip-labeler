@@ -199,6 +199,22 @@ async function runScheduledScan(dependencies) {
   }
 }
 
+function formatScanError(error) {
+  const message = String(error?.message || '');
+  if (message === 'unable to fetch source feed') return '无法拉取 Sub-Store 订阅';
+  if (message === 'upload failed') return '无法上传结果：请检查 SYNC_TOKEN';
+  if (/rate limited|blocked by|service unavailable|repeated Net\.Coffee timeout/.test(message)) {
+    return 'Net.Coffee 暂时限流，已暂停扫描';
+  }
+  return '扫描未完成，请查看 Surge 日志';
+}
+
+function notifyScanError(error) {
+  const message = formatScanError(error);
+  console.log(`[Surge IP Labeler] ${message}`);
+  if (typeof $notification !== 'undefined') $notification.post('Surge IP Labeler', '扫描失败', message);
+}
+
 function surgeGet(url, options) {
   return new Promise((resolve, reject) => {
     $httpClient.get({ url, ...options }, (error, response, body) => {
@@ -243,5 +259,8 @@ async function runInSurge(argument = $argument) {
 }
 
 if (typeof $httpClient !== 'undefined') {
-  runInSurge().then(() => $done()).catch(() => $done());
+  runInSurge().then(() => $done()).catch((error) => {
+    notifyScanError(error);
+    $done();
+  });
 }

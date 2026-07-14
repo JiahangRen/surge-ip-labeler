@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { runScan, runScheduledScan } from '../src/surge/ip-labeler.js';
+import { formatScanError, runScan, runScheduledScan } from '../src/surge/ip-labeler.js';
 
 function mockDeps({ descriptors = ['a'], exitIps = ['1.1.1.1'], lookupStatus = 200, cache = new Map(), calls = [] } = {}) {
   let exitIndex = 0;
@@ -90,4 +90,11 @@ test('sets the next actual scan six hours after a completed scan', async () => {
   await runScheduledScan(mockDeps({ cache }));
 
   assert.equal(cache.get('nextScanAt'), 1_000_000 + 6 * 60 * 60 * 1000);
+});
+
+test('converts scan failures into safe notification messages without secrets', () => {
+  assert.equal(formatScanError(new Error('unable to fetch source feed')), '无法拉取 Sub-Store 订阅');
+  assert.equal(formatScanError(new Error('upload failed')), '无法上传结果：请检查 SYNC_TOKEN');
+  assert.equal(formatScanError(new Error('rate limited by Net.Coffee')), 'Net.Coffee 暂时限流，已暂停扫描');
+  assert.equal(formatScanError(new Error('token=private-value')), '扫描未完成，请查看 Surge 日志');
 });
