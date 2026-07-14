@@ -13,7 +13,7 @@ test('publishes a self-contained Surge module and script at the GitHub Pages URL
   ]);
 
   assert.match(moduleText, /^#!arguments=configuration=REQUIRED_CONFIGURATION$/m);
-  assert.match(moduleText, new RegExp(`^surge-ip-labeler = .*script-path=${baseUrl}/surge-ip-labeler\\.js.*argument="%configuration%"`, 'm'));
+  assert.match(moduleText, new RegExp(`^surge-ip-labeler = .*script-path=${baseUrl}/surge-ip-labeler\\.js\\?rev=20e5e01.*argument="%configuration%"`, 'm'));
   assert.doesNotMatch(scriptText, /^import\s/m);
   assert.match(scriptText, /runInSurge\(\)\.then\(\(\) => \$done\(\)\)\.catch\(\(\) => \$done\(\)\)/);
 });
