@@ -72,7 +72,7 @@ function renderPolicyLine(node, label) {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const IP_ECHO_URL = 'https://api.ipify.org';
-const NET_COFFEE_URL = 'https://net.coffee/api/ip/lookup/';
+const NET_COFFEE_URL = 'https://ip.net.coffee/api/ip/lookup/';
 
 function parseStoredValue(value) {
   if (typeof value !== 'string') return value;
@@ -125,6 +125,7 @@ async function runScan(dependencies) {
   const intelByIp = new Map();
   let consecutiveTimeouts = 0;
   const lines = [];
+  let failedCount = 0;
 
   for (const node of nodes) {
     if (node.type !== 'policy') {
@@ -137,10 +138,12 @@ async function runScan(dependencies) {
       const echo = await deps.fetch(deps.ipEchoUrl, { 'policy-descriptor': node.descriptor, timeout: 10 });
       ip = echo.status >= 200 && echo.status < 300 ? responseBody(echo).trim() : '';
     } catch {
+      failedCount += 1;
       lines.push(renderPolicyLine(node, failedLabel(node)));
       continue;
     }
     if (!ip) {
+      failedCount += 1;
       lines.push(renderPolicyLine(node, failedLabel(node)));
       continue;
     }
@@ -175,7 +178,11 @@ async function runScan(dependencies) {
     lines.push(renderPolicyLine(node, formatLabel(node.name, ip, intel)));
   }
 
-  const result = { lines, content: lines.join('\n') };
+  const result = {
+    lines,
+    content: lines.join('\n'),
+    summary: { nodeCount: nodes.filter((node) => node.type === 'policy').length, failedCount },
+  };
   if (deps.upload) await deps.upload(result.content, result);
   return result;
 }
@@ -213,11 +220,11 @@ async function runInSurge(argument = $argument) {
     sleep: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
     now: () => Date.now(),
     random: Math.random,
-    upload: args.upload_url && args.upload_token ? async (content) => new Promise((resolve, reject) => {
+    upload: args.upload_url && args.upload_token ? async (content, result) => new Promise((resolve, reject) => {
       $httpClient.post({
         url: args.upload_url,
         headers: { Authorization: `Bearer ${args.upload_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, updatedAt: new Date().toISOString() }),
+        body: JSON.stringify({ content, updatedAt: new Date().toISOString(), summary: result.summary }),
       }, (error, response) => error || response.status < 200 || response.status >= 300 ? reject(error || new Error('upload failed')) : resolve());
     }) : undefined,
   });

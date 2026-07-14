@@ -63,3 +63,15 @@ test('opens a 24-hour circuit breaker on rate limiting and does not upload parti
   await assert.rejects(() => runScan(deps), /rate limited/);
   assert.equal(deps.store.get('blockedUntil'), 1_000_000 + 86_400_000);
 });
+
+test('uses the published Net.Coffee endpoint and uploads Worker-compatible summary', async () => {
+  const calls = [];
+  let uploaded;
+  const deps = mockDeps({ descriptors: ['a', 'b'], exitIps: ['1.1.1.1', '2.2.2.2'], calls });
+  deps.upload = async (content, result) => { uploaded = { content, result }; };
+
+  await runScan(deps);
+
+  assert.equal(calls.filter((call) => typeof call === 'object' && call.url.startsWith('https://ip.net.coffee/api/ip/lookup/')).length, 2);
+  assert.deepEqual(uploaded.result.summary, { nodeCount: 2, failedCount: 0 });
+});
