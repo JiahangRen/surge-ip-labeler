@@ -155,6 +155,7 @@ export async function runScheduledScan(dependencies) {
   if (Number(getStoreValue(store, 'nextScanAt')) > now()) return { skipped: true };
 
   try {
+    dependencies.onStart?.();
     return await runScan(dependencies);
   } finally {
     setStoreValue(store, 'nextScanAt', now() + SIX_HOURS_MS);
@@ -163,6 +164,7 @@ export async function runScheduledScan(dependencies) {
 
 export function formatScanError(error) {
   const message = String(error?.message || '');
+  if (message === 'source_url is required') return '未读取到模块 configuration';
   if (message === 'unable to fetch source feed') return '无法拉取 Sub-Store 订阅';
   if (message === 'upload failed') return '无法上传结果：请检查 SYNC_TOKEN';
   if (/rate limited|blocked by|service unavailable|repeated Net\.Coffee timeout/.test(message)) {
@@ -175,6 +177,11 @@ function notifyScanError(error) {
   const message = formatScanError(error);
   console.log(`[Surge IP Labeler] ${message}`);
   if (typeof $notification !== 'undefined') $notification.post('Surge IP Labeler', '扫描失败', message);
+}
+
+function notifyScanStart() {
+  console.log('[Surge IP Labeler] 开始扫描');
+  if (typeof $notification !== 'undefined') $notification.post('Surge IP Labeler', '开始扫描', '正在拉取订阅并检测出口 IP');
 }
 
 function surgeGet(url, options) {
@@ -211,6 +218,7 @@ export async function runInSurge(argument = $argument) {
     sleep: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
     now: () => Date.now(),
     random: Math.random,
+    onStart: notifyScanStart,
     upload: args.upload_url && args.upload_token ? async (content, result) => {
       await new Promise((resolve, reject) => {
         $httpClient.post({

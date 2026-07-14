@@ -93,6 +93,7 @@ test('sets the next actual scan six hours after a completed scan', async () => {
 });
 
 test('converts scan failures into safe notification messages without secrets', () => {
+  assert.equal(formatScanError(new Error('source_url is required')), '未读取到模块 configuration');
   assert.equal(formatScanError(new Error('unable to fetch source feed')), '无法拉取 Sub-Store 订阅');
   assert.equal(formatScanError(new Error('upload failed')), '无法上传结果：请检查 SYNC_TOKEN');
   assert.equal(formatScanError(new Error('rate limited by Net.Coffee')), 'Net.Coffee 暂时限流，已暂停扫描');
