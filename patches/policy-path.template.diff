@@ -1,0 +1,5 @@
+--- a/Surge.conf
++++ b/Surge.conf
+@@
+-RULE-SET,https://example.com/private-policy.list,PROXY
++RULE-SET,https://example.com/private-policy.list,DIRECT
