@@ -88,7 +88,7 @@ export async function runScan(dependencies) {
 
     let ip;
     try {
-      const echo = await deps.fetch(deps.ipEchoUrl, { 'policy-descriptor': node.descriptor, timeout: 10 });
+      const echo = await deps.fetch(deps.ipEchoUrl, { 'policy-descriptor': node.descriptor.trim(), timeout: 10 });
       ip = echo.status >= 200 && echo.status < 300 ? responseBody(echo).trim() : '';
     } catch {
       failedCount += 1;

@@ -53,7 +53,7 @@ test('uses policy descriptors for exit-IP discovery', async () => {
   await runScan(mockDeps({ descriptors: ['trojan, host, 443, password=x'], calls }));
 
   const echo = calls.find((call) => typeof call === 'object' && call.url === 'https://api.ipify.org');
-  assert.deepEqual(echo.options, { 'policy-descriptor': ' trojan, host, 443, password=x', timeout: 10 });
+  assert.deepEqual(echo.options, { 'policy-descriptor': 'trojan, host, 443, password=x', timeout: 10 });
 });
 
 test('opens a 24-hour circuit breaker on rate limiting and does not upload partial output', async () => {
