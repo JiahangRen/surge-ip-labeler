@@ -28,25 +28,38 @@ test('rejects missing and wrong upload credentials', async () => {
   assert.equal(await env.POLICIES.get('current'), null);
 });
 
-test('rejects every upload when the sync secret is missing or empty', async () => {
+test('rejects every upload when the sync secret is missing', async () => {
   const body = JSON.stringify({ content: 'Node = ss, host, 443', updatedAt: '2026-07-14T00:00:00Z', summary: { nodeCount: 1, failedCount: 0 } });
 
-  for (const syncToken of [undefined, '']) {
-    const env = makeEnv();
-    env.SYNC_TOKEN = syncToken;
+  const env = makeEnv();
+  env.SYNC_TOKEN = undefined;
 
-    assert.equal((await worker.fetch(request('/v1/snapshot', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer undefined', 'Content-Type': 'application/json' },
-      body,
-    }), env)).status, 401);
-    assert.equal((await worker.fetch(request('/v1/snapshot', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer sync-secret', 'Content-Type': 'application/json' },
-      body,
-    }), env)).status, 401);
-    assert.equal(await env.POLICIES.get('current'), null);
-  }
+  assert.equal((await worker.fetch(request('/v1/snapshot', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer undefined', 'Content-Type': 'application/json' },
+    body,
+  }), env)).status, 401);
+  assert.equal((await worker.fetch(request('/v1/snapshot', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer sync-secret', 'Content-Type': 'application/json' },
+    body,
+  }), env)).status, 401);
+  assert.equal(await env.POLICIES.get('current'), null);
+});
+
+test('rejects a matching blank bearer token when the sync secret is empty', async () => {
+  const env = makeEnv();
+  env.SYNC_TOKEN = '';
+  const snapshot = { content: 'Node = ss, host, 443', updatedAt: '2026-07-14T00:00:00Z', summary: { nodeCount: 1, failedCount: 0 } };
+  const upload = {
+    method: 'POST',
+    url: 'https://worker.example/v1/snapshot',
+    headers: { get: (name) => name === 'Authorization' ? 'Bearer ' : null },
+    json: async () => snapshot,
+  };
+
+  assert.equal((await worker.fetch(upload, env)).status, 401);
+  assert.equal(await env.POLICIES.get('current'), null);
 });
 
 test('stores a valid snapshot and serves it only to a protected subscription request', async () => {
