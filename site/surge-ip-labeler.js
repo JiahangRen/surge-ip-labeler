@@ -71,6 +71,7 @@ function renderPolicyLine(node, label) {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
 const IP_ECHO_URL = 'https://api.ipify.org';
 const NET_COFFEE_URL = 'https://ip.net.coffee/api/ip/lookup/';
 
@@ -187,6 +188,17 @@ async function runScan(dependencies) {
   return result;
 }
 
+async function runScheduledScan(dependencies) {
+  const { store, now } = dependencies;
+  if (Number(store.get('nextScanAt')) > now()) return { skipped: true };
+
+  try {
+    return await runScan(dependencies);
+  } finally {
+    store.set('nextScanAt', now() + SIX_HOURS_MS);
+  }
+}
+
 function surgeGet(url, options) {
   return new Promise((resolve, reject) => {
     $httpClient.get({ url, ...options }, (error, response, body) => {
@@ -213,7 +225,7 @@ function parseArguments(argument) {
 
 async function runInSurge(argument = $argument) {
   const args = parseArguments(argument);
-  return runScan({
+  return runScheduledScan({
     sourceUrl: args.source_url,
     store: surgeStore(),
     fetch: surgeGet,

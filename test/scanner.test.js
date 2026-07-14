@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { runScan } from '../src/surge/ip-labeler.js';
+import { runScan, runScheduledScan } from '../src/surge/ip-labeler.js';
 
 function mockDeps({ descriptors = ['a'], exitIps = ['1.1.1.1'], lookupStatus = 200, cache = new Map(), calls = [] } = {}) {
   let exitIndex = 0;
@@ -74,4 +74,20 @@ test('uses the published Net.Coffee endpoint and uploads Worker-compatible summa
 
   assert.equal(calls.filter((call) => typeof call === 'object' && call.url.startsWith('https://ip.net.coffee/api/ip/lookup/')).length, 2);
   assert.deepEqual(uploaded.result.summary, { nodeCount: 2, failedCount: 0 });
+});
+
+test('skips all network activity until the next scheduled scan', async () => {
+  const calls = [];
+  const cache = new Map([['nextScanAt', 1_000_001]]);
+  const result = await runScheduledScan(mockDeps({ cache, calls }));
+
+  assert.deepEqual(result, { skipped: true });
+  assert.equal(calls.length, 0);
+});
+
+test('sets the next actual scan six hours after a completed scan', async () => {
+  const cache = new Map();
+  await runScheduledScan(mockDeps({ cache }));
+
+  assert.equal(cache.get('nextScanAt'), 1_000_000 + 6 * 60 * 60 * 1000);
 });

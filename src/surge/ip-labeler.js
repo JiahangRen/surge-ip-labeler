@@ -1,6 +1,7 @@
 import { formatLabel, parsePolicyFeed, renderPolicyLine } from '../shared/policy.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
 const IP_ECHO_URL = 'https://api.ipify.org';
 const NET_COFFEE_URL = 'https://ip.net.coffee/api/ip/lookup/';
 
@@ -145,6 +146,21 @@ export async function runScan(dependencies) {
   return result;
 }
 
+/**
+ * Run a scan only when the local six-hour schedule is due. The module invokes
+ * this every minute so a newly installed configuration starts promptly.
+ */
+export async function runScheduledScan(dependencies) {
+  const { store, now } = dependencies;
+  if (Number(getStoreValue(store, 'nextScanAt')) > now()) return { skipped: true };
+
+  try {
+    return await runScan(dependencies);
+  } finally {
+    setStoreValue(store, 'nextScanAt', now() + SIX_HOURS_MS);
+  }
+}
+
 function surgeGet(url, options) {
   return new Promise((resolve, reject) => {
     $httpClient.get({ url, ...options }, (error, response, body) => {
@@ -172,7 +188,7 @@ function parseArguments(argument) {
 export async function runInSurge(argument = $argument) {
   const args = parseArguments(argument);
   const store = surgeStore();
-  return runScan({
+  return runScheduledScan({
     sourceUrl: args.source_url,
     store,
     fetch: surgeGet,
