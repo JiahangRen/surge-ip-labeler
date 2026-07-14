@@ -13,4 +13,5 @@ test('wires Surge module arguments into the cron script invocation', async () =>
     /^surge-ip-labeler = .*script-path=https:\/\/WORKER\/surge-ip-labeler\.js.*argument="source_url=%source_url%&upload_url=%upload_url%&upload_token=%upload_token%"/m,
   );
   assert.doesNotMatch(moduleText, /^\[Argument\]$/m);
+  assert.doesNotMatch(moduleText, /^#!system=/m);
 });

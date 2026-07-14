@@ -1,6 +1,5 @@
 #!name=Surge IP Labeler
 #!desc=Safely labels a private Surge policy feed with exit-IP intelligence.
-#!system=ios
 #!arguments=source_url=&upload_url=&upload_token=
 
 [Script]
