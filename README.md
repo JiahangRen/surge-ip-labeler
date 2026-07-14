@@ -1,23 +1,27 @@
 # Surge IP Labeler
 
-此项目为私有 Surge 策略订阅增加出口 IP 情报标签，并把更新后的策略提交到你的同步服务。仓库与 GitHub Pages 只发布可复用代码和占位配置，绝不提交订阅地址、密码、UUID 或令牌。
+此项目为 Surge 节点增加出口 IP 情报标签。推荐方式是在 Sub-Store 的节点处理阶段直接运行脚本：不修改原始机场订阅，也不需要 Worker、Token 或额外 `policy-path`。
 
-## 设置
+## 推荐设置：Sub-Store 直接加工
 
-1. Fork 此仓库，启用仓库的 GitHub Pages（Source 选择 GitHub Actions），并在 Pages 设置中确认自定义域名或默认地址。
-2. 在 Surge 添加模块：`https://<你的 GitHub 用户名>.github.io/<仓库名>/module.sgmodule`。
-3. 在模块参数中填写：
-   - `source_url`：你的私有策略订阅地址；
-   - `upload_url`：你自己部署的受保护同步 Worker 地址；
-   - `upload_token`：与 Worker 的同步密钥。
-4. 在目标配置中应用 [patches/policy-path.template.diff](patches/policy-path.template.diff) 的路径变更；先将其中示例 URL 替换为你的受保护同步地址。
-5. 手动执行一次模块或等待 cron 任务。成功后确认策略名称带有 IP 标签，且同步端只接受带有效授权头的写入请求。
+1. 在 Surge 使用 Sub-Store 的 [Surge-ability 模块](https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge-ability.sgmodule)。它允许 Sub-Store 操作脚本通过指定节点发起出口探测。
+2. 在 Sub-Store 为你的集合添加 Script Operator，脚本 URL 为：
 
-不要把上述三个参数写入模块文件、README、Issues、Actions 日志或公开的 Surge 配置。修改前运行 `npm test`；Pages 工作流也会在部署 `site/` 前运行同一套测试。
+   `https://jiahangren.github.io/surge-ip-labeler/substore-ip-labeler.js`
+
+3. 参数可填写 `limit=5`（默认 5 路并发；可设为 1–10）。
+4. 继续使用你原有的 Sub-Store Surge 输出链接，例如 `https://sub.store/download/collection/combo_all?target=Surge`，不要再使用 Worker 的 `/v1/subscription` 地址。
+
+节点会显示为：`IPLC 香港 01 [203.0.113.8] | 🟢92 | 原生IP | 住宅 | 人类偏多`。同一出口 IP 的 Net.Coffee 结果缓存 24 小时。
+
+## 旧 Worker 方案
+
+`module.sgmodule` 和 `worker/` 保留为旧实现的代码记录。若你已采用推荐方案，应禁用 Surge IP Labeler 模块，并从配置删除指向 Worker 的 `policy-path`。
+
+不要把订阅地址、密码、UUID 或令牌提交到仓库、Issues、Actions 日志或公开配置。修改前运行 `npm test`；Pages 工作流也会在部署 `site/` 前运行同一套测试。
 
 ## 回滚
 
-1. 在 Surge 禁用或删除该模块。
-2. 将目标配置中的策略路径恢复为应用补丁前的地址，然后重新加载配置。
-3. 在同步 Worker 侧撤销当前同步密钥；若密钥曾公开，立即轮换它。
-4. 如需停止公开模块，关闭 GitHub Pages 或删除 Pages 环境部署；保留私有订阅和同步端的访问控制。
+1. 从 Sub-Store 集合移除 Script Operator。
+2. 继续使用原有 Sub-Store 输出链接并重新加载配置。
+3. 若仍保留旧 Worker，轮换曾公开的密钥。

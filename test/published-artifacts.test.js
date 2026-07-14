@@ -19,6 +19,10 @@ test('published artifacts contain no credentials or real source subscription URL
   const artifacts = await readPublishedArtifacts();
 
   assert.ok(artifacts.some(({ path }) => path.endsWith('/index.html')), 'site must provide an index page');
+  const subStoreScript = artifacts.find(({ path }) => path.endsWith('/substore-ip-labeler.js'));
+  assert.ok(subStoreScript, 'site must publish the Sub-Store operator');
+  assert.match(subStoreScript.content, /async function operator\(proxies = \[\]/);
+  assert.doesNotMatch(subStoreScript.content, /^import\s/m);
   for (const { path, content } of artifacts) {
     assert.doesNotMatch(content, /\b(?:password|uuid|token)=/i, `${path} exposes a credential parameter`);
     assert.doesNotMatch(
