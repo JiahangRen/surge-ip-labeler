@@ -12,8 +12,8 @@ test('publishes a self-contained Surge module and script at the GitHub Pages URL
     readFile(scriptPath, 'utf8'),
   ]);
 
-  assert.match(moduleText, /^#!arguments=source_url=REQUIRED_SOURCE_URL&upload_url=REQUIRED_UPLOAD_URL&upload_token=REQUIRED_SYNC_TOKEN$/m);
-  assert.match(moduleText, new RegExp(`^surge-ip-labeler = .*script-path=${baseUrl}/surge-ip-labeler\\.js.*argument="source_url=%source_url%&upload_url=%upload_url%&upload_token=%upload_token%"`, 'm'));
+  assert.match(moduleText, /^#!arguments=configuration=REQUIRED_CONFIGURATION$/m);
+  assert.match(moduleText, new RegExp(`^surge-ip-labeler = .*script-path=${baseUrl}/surge-ip-labeler\\.js.*argument="%configuration%"`, 'm'));
   assert.doesNotMatch(scriptText, /^import\s/m);
   assert.match(scriptText, /runInSurge\(\)\.then\(\(\) => \$done\(\)\)\.catch\(\(\) => \$done\(\)\)/);
 });
