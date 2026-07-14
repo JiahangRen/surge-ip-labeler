@@ -1,0 +1,11 @@
+#!name=Surge IP Labeler
+#!desc=Safely labels a private Surge policy feed with exit-IP intelligence.
+#!system=ios
+
+[Script]
+surge-ip-labeler = type=cron, cronexp="0 */6 * * *", script-path=https://example.invalid/surge-ip-labeler.js, timeout=300, script-update-interval=86400
+
+[Argument]
+source_url=
+upload_url=
+upload_token=
