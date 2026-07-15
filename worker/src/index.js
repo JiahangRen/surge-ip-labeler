@@ -51,6 +51,19 @@ async function subscription(url, env) {
   });
 }
 
+async function iosPolicy(url, env) {
+  if (!env.IOS_READ_TOKEN || url.searchParams.get('token') !== env.IOS_READ_TOKEN) return unauthorized();
+
+  const content = await env.POLICIES.get('current');
+  if (content === null) return new Response('Not Found', { status: 404 });
+  return new Response(content, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'private, max-age=300',
+    },
+  });
+}
+
 async function status(env) {
   const savedStatus = await env.POLICIES.get('status');
   if (savedStatus === null) return json({ updatedAt: null, nodeCount: 0, failedCount: 0 });
@@ -62,6 +75,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === 'POST' && url.pathname === '/v1/snapshot') return storeSnapshot(request, env);
     if (request.method === 'GET' && url.pathname === '/v1/subscription') return subscription(url, env);
+    if (request.method === 'GET' && url.pathname === '/v1/ios-policy') return iosPolicy(url, env);
     if (request.method === 'GET' && url.pathname === '/v1/status') return status(env);
     return new Response('Not Found', { status: 404 });
   },
