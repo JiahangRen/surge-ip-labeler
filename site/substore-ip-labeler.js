@@ -24,17 +24,45 @@ function score(value) {
   return `🔴${number}`;
 }
 
+function countryCode(value) {
+  return typeof value === 'string' && /^[a-z]{2}$/i.test(value.trim()) ? value.trim().toUpperCase() : '';
+}
+
+function nativeLabel(native, intel) {
+  if (native === true) return '原生IP';
+  if (native === false) return '非原生IP';
+  const country = countryCode(value(intel, 'countryCode', 'country_code'));
+  const registered = countryCode(value(intel, 'registered_country_code', 'registeredCountryCode'));
+  if (country && registered && country !== registered) return `广播IP (${registered})`;
+  if (country && country === registered && intel?.isResidential === true && intel?.is_vpn !== true && intel?.is_proxy !== true) return '原生IP';
+  return '原生未知';
+}
+
+function residentialLabel(residential, intel) {
+  if (residential === true) return '住宅';
+  if (intel?.is_datacenter === true || /^(hosting|datacenter)$/i.test(String(intel?.company_type || ''))) return '机房IP';
+  if (residential === false) return '非住宅';
+  return '住宅未知';
+}
+
+function abuseHistory(intel) {
+  if (intel?.is_abuser === true) return true;
+  return ['medium', 'high', 'critical', 'severe'].includes(String(intel?.intelligence?.abuser_level || intel?.abuser_level || '').toLowerCase());
+}
+
 function label(name, ip, intel) {
   const native = value(intel, 'native', 'is_native', 'isNative');
   const residential = value(intel, 'isResidential', 'is_residential', 'residential');
   const crawler = value(intel, 'is_crawler', 'isCrawler', 'crawler');
-  return [
+  const labels = [
     `${String(name).replace(/[\r\n]+/g, ' ').replaceAll('=', '＝').trim()} [${ip}]`,
     score(value(intel, 'trust_score', 'trustScore', 'score')),
-    native === true ? '原生IP' : native === false ? '非原生IP' : '原生未知',
-    residential === true ? '住宅' : residential === false ? '非住宅' : '住宅未知',
-    crawler === true ? '爬虫偏多' : crawler === false ? '人类偏多' : '人类未知',
-  ].join(' | ');
+    nativeLabel(native, intel),
+    residentialLabel(residential, intel),
+  ];
+  if (abuseHistory(intel)) labels.push('历史滥用');
+  labels.push(crawler === true ? '机器偏多' : crawler === false ? '人类偏多' : '人类未知');
+  return labels.join(' | ');
 }
 
 function status(name, message) {

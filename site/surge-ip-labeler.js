@@ -22,22 +22,36 @@ function formatScore(value) {
   return `🔴${score}`;
 }
 
-function formatNative(value) {
+function normalizedCountryCode(value) {
+  return typeof value === 'string' && /^[a-z]{2}$/i.test(value.trim()) ? value.trim().toUpperCase() : '';
+}
+
+function formatNative(value, intel) {
   if (value === true) return '原生IP';
   if (value === false) return '非原生IP';
+  const country = normalizedCountryCode(getIntelValue(intel, 'countryCode', 'country_code'));
+  const registered = normalizedCountryCode(getIntelValue(intel, 'registered_country_code', 'registeredCountryCode'));
+  if (country && registered && country !== registered) return `广播IP (${registered})`;
+  if (country && country === registered && intel.isResidential === true && intel.is_vpn !== true && intel.is_proxy !== true) return '原生IP';
   return '原生未知';
 }
 
-function formatResidential(value) {
+function formatResidential(value, intel) {
   if (value === true) return '住宅';
+  if (intel.is_datacenter === true || /^(hosting|datacenter)$/i.test(String(intel.company_type || ''))) return '机房IP';
   if (value === false) return '非住宅';
   return '住宅未知';
 }
 
 function formatHuman(value) {
-  if (value === true) return '爬虫偏多';
+  if (value === true) return '机器偏多';
   if (value === false) return '人类偏多';
   return '人类未知';
+}
+
+function hasAbuseHistory(intel) {
+  if (intel.is_abuser === true) return true;
+  return ['medium', 'high', 'critical', 'severe'].includes(String(intel.intelligence?.abuser_level || intel.abuser_level || '').toLowerCase());
 }
 
 function parsePolicyFeed(text) {
@@ -56,13 +70,15 @@ function parsePolicyFeed(text) {
 function formatLabel(name, exitIp, intel = {}) {
   const ip = typeof exitIp === 'string' && exitIp.trim() ? exitIp.trim() : 'IP:未知';
   const intelData = intel !== null && typeof intel === 'object' ? intel : {};
-  return [
+  const labels = [
     `${sanitizeName(name)} [${ip}]`,
     formatScore(getIntelValue(intelData, 'trust_score', 'trustScore', 'score')),
-    formatNative(getIntelValue(intelData, 'native', 'is_native', 'isNative')),
-    formatResidential(getIntelValue(intelData, 'isResidential', 'is_residential', 'residential')),
-    formatHuman(getIntelValue(intelData, 'is_crawler', 'isCrawler', 'crawler')),
-  ].join(' | ');
+    formatNative(getIntelValue(intelData, 'native', 'is_native', 'isNative'), intelData),
+    formatResidential(getIntelValue(intelData, 'isResidential', 'is_residential', 'residential'), intelData),
+  ];
+  if (hasAbuseHistory(intelData)) labels.push('历史滥用');
+  labels.push(formatHuman(getIntelValue(intelData, 'is_crawler', 'isCrawler', 'crawler')));
+  return labels.join(' | ');
 }
 
 function renderPolicyLine(node, label) {

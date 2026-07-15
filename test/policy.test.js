@@ -39,6 +39,33 @@ test('uses green, yellow, and red score bands without inventing a percentage', (
   assert.doesNotMatch(formatLabel('A', '1.1.1.1', {}), /%/);
 });
 
+test('maps Net.Coffee datacenter, abuse, crawler, and country-origin signals without inventing data', () => {
+  assert.equal(
+    formatLabel('IDC', '200.58.105.45', {
+      trust_score: 81,
+      countryCode: 'ar',
+      registered_country_code: 'us',
+      is_datacenter: true,
+      isResidential: false,
+      is_abuser: true,
+      is_crawler: true,
+    }),
+    'IDC [200.58.105.45] | 🟢81 | 广播IP (US) | 机房IP | 历史滥用 | 机器偏多',
+  );
+  assert.equal(
+    formatLabel('住宅', '118.140.56.81', {
+      trust_score: 100,
+      countryCode: 'hk',
+      registered_country_code: 'hk',
+      isResidential: true,
+      is_vpn: false,
+      is_proxy: false,
+      is_crawler: false,
+    }),
+    '住宅 [118.140.56.81] | 🟢100 | 原生IP | 住宅 | 人类偏多',
+  );
+});
+
 test('preserves blank lines and comments unchanged', () => {
   const nodes = parsePolicyFeed('# curated nodes\n\nHK = ss, host, 443, encrypt-method=aes-128-gcm, password=x');
 
