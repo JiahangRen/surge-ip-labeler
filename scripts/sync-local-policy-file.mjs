@@ -9,7 +9,7 @@ import { buildValidationProfile, syncSnapshot } from '../src/local/policy-mirror
 import { downloadSnapshot } from '../src/local/download.js';
 
 const execFileAsync = promisify(execFile);
-const DEFAULT_ENDPOINT = 'https://surge-ip-labeler.jiahangren-surge.workers.dev/v1/subscription';
+const DEFAULT_ENDPOINT = 'https://ip-labeler.renjiahang1201.xyz/v1/subscription';
 const DEFAULT_SERVICE = 'surge-ip-labeler-read-token';
 
 function usage() {

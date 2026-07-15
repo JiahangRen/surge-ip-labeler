@@ -6,3 +6,7 @@ compatibility_date = "2026-07-14"
 [[kv_namespaces]]
 binding = "POLICIES"
 id = "f0f0e3407e38435b81374bdea98439a2"
+
+[[routes]]
+pattern = "ip-labeler.renjiahang1201.xyz"
+custom_domain = true

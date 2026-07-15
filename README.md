@@ -13,7 +13,7 @@
 4. 为让本机读取加工结果，给脚本 URL 的 `#` 参数加入本地同步配置。示例中的令牌是占位符，不要公开或提交：
 
    ```text
-   https://jiahangren.github.io/surge-ip-labeler/substore-ip-labeler.js#limit=10&sync_url=https%3A%2F%2Fsurge-ip-labeler.jiahangren-surge.workers.dev%2Fv1%2Fsnapshot&sync_token=YOUR_SYNC_TOKEN
+   https://jiahangren.github.io/surge-ip-labeler/substore-ip-labeler.js#limit=10&sync_url=https%3A%2F%2Fip-labeler.renjiahang1201.xyz%2Fv1%2Fsnapshot&sync_token=YOUR_SYNC_TOKEN
    ```
 
    保存并执行一次即时预览后，脚本会在整轮完成时将加工后的 Surge 节点文本上传到 Worker。只填写 `sync_url` 或只填写 `sync_token` 会明确报错，不会上传部分内容。
