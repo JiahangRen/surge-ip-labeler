@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { promisify } from 'node:util';
 
 import { buildValidationProfile, syncSnapshot } from '../src/local/policy-mirror.js';
+import { downloadSnapshot } from '../src/local/download.js';
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_ENDPOINT = 'https://surge-ip-labeler.jiahangren-surge.workers.dev/v1/subscription';
@@ -86,10 +87,10 @@ async function main() {
 
   const result = await syncSnapshot({
     fetchSnapshot: async () => {
-      const { stdout } = await execFileAsync('/usr/bin/curl', [
-        '--noproxy', '*', '--fail', '--silent', '--show-error', '--max-time', '20', url.toString(),
-      ], { maxBuffer: 16 * 1024 * 1024 });
-      return stdout;
+      return downloadSnapshot({
+        url: url.toString(),
+        runCurl: (curlArgs) => execFileAsync('/usr/bin/curl', curlArgs, { maxBuffer: 16 * 1024 * 1024 }),
+      });
     },
     validate: async (profile) => validateWithSurge(surgeCli, profile),
     writeAtomic,
