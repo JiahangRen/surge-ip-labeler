@@ -10,7 +10,7 @@
    `https://jiahangren.github.io/surge-ip-labeler/substore-ip-labeler.js`
 
 3. 参数可填写 `limit=5`（默认 5 路并发；可设为 1–10）。
-4. 为让 Surge 原生节点列表读取加工结果，给脚本 URL 的 `#` 参数加入本地同步配置。示例中的令牌是占位符，不要公开或提交：
+4. 为让本机读取加工结果，给脚本 URL 的 `#` 参数加入本地同步配置。示例中的令牌是占位符，不要公开或提交：
 
    ```text
    https://jiahangren.github.io/surge-ip-labeler/substore-ip-labeler.js#limit=10&sync_url=https%3A%2F%2Fsurge-ip-labeler.jiahangren-surge.workers.dev%2Fv1%2Fsnapshot&sync_token=YOUR_SYNC_TOKEN
@@ -18,13 +18,37 @@
 
    保存并执行一次即时预览后，脚本会在整轮完成时将加工后的 Surge 节点文本上传到 Worker。只填写 `sync_url` 或只填写 `sync_token` 会明确报错，不会上传部分内容。
 
-5. 仅替换 Surge 需要显示标签的策略组 `policy-path`，使用私有 Worker 输出：
+## 推荐加载方式：本机镜像
 
-   ```text
-   policy-path=https://surge-ip-labeler.jiahangren-surge.workers.dev/v1/subscription?token=YOUR_READ_TOKEN
+部分 Surge 环境无法稳定加载 `sub.store/...` 或 `workers.dev/...` 形式的远程 `policy-path`。此时不要把远程地址放进策略组，改用本机文件：脚本会先下载 Worker 快照、用 `surge-cli --check` 验证，再原子替换本地文件；下载或校验失败时旧文件完全保留。
+
+1. 在 Mac 终端执行以下命令。它会提示输入 `READ_TOKEN`，输入过程不会显示内容，也不要把令牌发给任何人：
+
+   ```bash
+   security add-generic-password -U -a "$USER" -s surge-ip-labeler-read-token -w
    ```
 
-   `sub.store/download/...` 是本地 Sub-Store 模块拦截的虚拟地址；浏览器预览可以使用它，但 Surge 的原生外部资源不会执行这段本地拦截脚本。
+2. 首次手动生成本地文件（将仓库路径替换成你的实际路径）：
+
+   ```bash
+   node "/Users/jeffereyreng/Documents/surge模块/.worktrees/surge-ip-labeler/scripts/sync-local-policy-file.mjs" \
+     --output "$HOME/Library/Application Support/Surge/Profiles/ip-labels.conf"
+   ```
+
+   成功时只会输出策略数量，不会输出令牌或节点凭据。失败时也不会覆盖已有的 `ip-labels.conf`。
+
+3. 先在当前 Surge 配置的 `[Proxy Group]` 添加一个**不被任何规则引用**的测试组：
+
+   ```ini
+   🧪 IP 标签本地测试 = select, policy-path=ip-labels.conf
+   ```
+
+   应用配置后打开这个测试组；若能看到完整 IP 和标签，再将原有策略组中的远程
+   `policy-path=...` 改为 `policy-path=ip-labels.conf`。相对路径会从当前 Surge 配置文件所在的 `Profiles` 目录读取。
+
+4. 稳定后可用 macOS 的 `launchd` 定期执行同一条同步命令；首次验证前不要自动重载 Surge 配置，以免影响现有网络。
+
+`sub.store/download/...` 是本地 Sub-Store 模块拦截的虚拟地址；浏览器预览可以使用它，但 Surge 的原生外部资源不会执行这段本地拦截脚本。
 
 节点会显示为：`IPLC 香港 01 [203.0.113.8] | 🟢92 | 原生IP | 住宅 | 人类偏多`。同一出口 IP 的 Net.Coffee 结果缓存 24 小时。
 
@@ -36,6 +60,6 @@
 
 ## 回滚
 
-1. 从 Sub-Store 集合移除 Script Operator。
-2. 继续使用原有 Sub-Store 输出链接并重新加载配置。
-3. 若仍保留旧 Worker，轮换曾公开的密钥。
+1. 把策略组恢复成原有的 `policy-path`，或删除测试组。
+2. `ip-labels.conf` 是独立本地文件，删除它不会改动上游订阅。
+3. 若令牌曾公开，轮换 Worker 密钥并更新 Keychain 项。
