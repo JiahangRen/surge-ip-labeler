@@ -39,3 +39,13 @@ test('published artifacts contain no credentials or real source subscription URL
     );
   }
 });
+
+test('documents the iOS route as an isolated test group without changing macOS mirroring', async () => {
+  const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
+
+  assert.match(readme, /## iOS 独立测试/);
+  assert.match(readme, /IOS_READ_TOKEN/);
+  assert.match(readme, /🧪 IP 标签 iOS/);
+  assert.match(readme, /不修改 macOS 的本地镜像/);
+  assert.match(readme, /https:\/\/jiahangren\.github\.io\/surge-ip-labeler\/ios-ip-labeler\.sgmodule/);
+});
