@@ -41,26 +41,36 @@ function formatNative(value, intel) {
     && intel.is_vpn !== true
     && intel.is_proxy !== true
   ) return '原生IP';
-  return '原生未知';
+  return '';
 }
 
 function formatResidential(value, intel) {
   if (value === true) return '住宅';
   if (intel.is_datacenter === true || /^(hosting|datacenter)$/i.test(String(intel.company_type || ''))) return '机房IP';
   if (value === false) return '非住宅';
-  return '住宅未知';
+  return '';
 }
 
 function formatHuman(value) {
   if (value === true) return '机器偏多';
   if (value === false) return '人类偏多';
-  return '人类未知';
+  return '';
 }
 
 function hasAbuseHistory(intel) {
   if (intel.is_abuser === true) return true;
   const level = String(intel.intelligence?.abuser_level || intel.abuser_level || '').toLowerCase();
   return ['medium', 'high', 'critical', 'severe'].includes(level);
+}
+
+function formatGptScore(intel) {
+  const verdict = intel.ai_verdict;
+  if (!verdict || typeof verdict !== 'object') return '';
+  const confidence = Number(verdict.confidence);
+  const label = typeof verdict.label === 'string' ? verdict.label.trim() : '';
+  if (!Number.isFinite(confidence)) return '';
+  const display = Number.isInteger(confidence) ? String(confidence) : String(confidence);
+  return label ? `GPT评分:${display} (${label})` : `GPT评分:${display}`;
 }
 
 export function parsePolicyFeed(text) {
@@ -99,8 +109,9 @@ export function formatLabel(name, exitIp, intel = {}) {
   ];
   if (hasAbuseHistory(intelData)) labels.push('历史滥用');
   labels.push(formatHuman(crawler));
+  labels.push(formatGptScore(intelData));
 
-  return labels.join(' | ');
+  return labels.filter(Boolean).join(' | ');
 }
 
 export function renderPolicyLine(node, label) {

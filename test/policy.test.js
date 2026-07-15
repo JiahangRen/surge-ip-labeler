@@ -28,7 +28,21 @@ test('uses required score thresholds and unknown fallbacks', () => {
 test('uses unknown fallbacks when intelligence data is null', () => {
   assert.equal(
     formatLabel('HK 01', null, null),
-    'HK 01 [IP:未知] | 评分未知 | 原生未知 | 住宅未知 | 人类未知',
+    'HK 01 [IP:未知] | 评分未知',
+  );
+});
+
+test('shows Net.Coffee AI verdict confidence as GPT score and omits unavailable category fields', () => {
+  assert.equal(
+    formatLabel('GPT', '203.0.113.8', {
+      trust_score: 92,
+      ai_verdict: { label: 'IDC', confidence: 99 },
+    }),
+    'GPT [203.0.113.8] | 🟢92 | GPT评分:99 (IDC)',
+  );
+  assert.equal(
+    formatLabel('仅评分', '203.0.113.9', { trust_score: 92 }),
+    '仅评分 [203.0.113.9] | 🟢92',
   );
 });
 

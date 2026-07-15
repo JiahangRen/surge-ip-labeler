@@ -57,7 +57,7 @@ async function lookupIntel(deps, ip) {
 }
 
 function failedLabel(node) {
-  return `${node.name} [检测失败] | 评分未知 | 原生未知 | 住宅未知 | 人类未知`;
+  return `${node.name} [检测失败] | 评分未知`;
 }
 
 /**

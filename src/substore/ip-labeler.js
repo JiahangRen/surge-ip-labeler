@@ -24,7 +24,7 @@ function parseExitIp(body) {
 }
 
 function statusLabel(name, status) {
-  return `${name} [${status}] | 评分未知 | 原生未知 | 住宅未知 | 人类未知`;
+  return `${name} [${status}] | 评分未知`;
 }
 
 async function mapLimit(items, limit, task) {

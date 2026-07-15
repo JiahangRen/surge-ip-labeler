@@ -35,19 +35,27 @@ function nativeLabel(native, intel) {
   const registered = countryCode(value(intel, 'registered_country_code', 'registeredCountryCode'));
   if (country && registered && country !== registered) return `广播IP (${registered})`;
   if (country && country === registered && intel?.isResidential === true && intel?.is_vpn !== true && intel?.is_proxy !== true) return '原生IP';
-  return '原生未知';
+  return '';
 }
 
 function residentialLabel(residential, intel) {
   if (residential === true) return '住宅';
   if (intel?.is_datacenter === true || /^(hosting|datacenter)$/i.test(String(intel?.company_type || ''))) return '机房IP';
   if (residential === false) return '非住宅';
-  return '住宅未知';
+  return '';
 }
 
 function abuseHistory(intel) {
   if (intel?.is_abuser === true) return true;
   return ['medium', 'high', 'critical', 'severe'].includes(String(intel?.intelligence?.abuser_level || intel?.abuser_level || '').toLowerCase());
+}
+
+function gptScore(intel) {
+  const confidence = Number(intel?.ai_verdict?.confidence);
+  const verdict = typeof intel?.ai_verdict?.label === 'string' ? intel.ai_verdict.label.trim() : '';
+  if (!Number.isFinite(confidence)) return '';
+  const display = Number.isInteger(confidence) ? String(confidence) : String(confidence);
+  return verdict ? `GPT评分:${display} (${verdict})` : `GPT评分:${display}`;
 }
 
 function label(name, ip, intel) {
@@ -61,12 +69,13 @@ function label(name, ip, intel) {
     residentialLabel(residential, intel),
   ];
   if (abuseHistory(intel)) labels.push('历史滥用');
-  labels.push(crawler === true ? '机器偏多' : crawler === false ? '人类偏多' : '人类未知');
-  return labels.join(' | ');
+  labels.push(crawler === true ? '机器偏多' : crawler === false ? '人类偏多' : '');
+  labels.push(gptScore(intel));
+  return labels.filter(Boolean).join(' | ');
 }
 
 function status(name, message) {
-  return `${String(name).replace(/[\r\n]+/g, ' ').replaceAll('=', '＝').trim()} [${message}] | 评分未知 | 原生未知 | 住宅未知 | 人类未知`;
+  return `${String(name).replace(/[\r\n]+/g, ' ').replaceAll('=', '＝').trim()} [${message}] | 评分未知`;
 }
 
 function parseIntel(body) {
