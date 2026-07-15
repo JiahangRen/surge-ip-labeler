@@ -64,13 +64,10 @@ function hasAbuseHistory(intel) {
 }
 
 function formatGptScore(intel) {
-  const verdict = intel.ai_verdict;
-  if (!verdict || typeof verdict !== 'object') return '';
-  const confidence = Number(verdict.confidence);
-  const label = typeof verdict.label === 'string' ? verdict.label.trim() : '';
-  if (!Number.isFinite(confidence)) return '';
-  const display = Number.isInteger(confidence) ? String(confidence) : String(confidence);
-  return label ? `GPT评分:${display} (${label})` : `GPT评分:${display}`;
+  const score = Number(getIntelValue(intel, 'gpt_trust_score', 'gptTrustScore'));
+  if (!Number.isFinite(score) || score < 0 || score > 100) return '';
+  const display = Number.isInteger(score) ? String(score) : String(score);
+  return `GPT评分:${display}`;
 }
 
 export function parsePolicyFeed(text) {

@@ -3,6 +3,8 @@ import { formatLabel } from '../shared/policy.js';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const IP_ECHO_URL = 'http://ip-api.com/json?fields=status,query';
 const NET_COFFEE_URL = 'https://ip.net.coffee/api/ip/lookup/';
+const CHATGPT_TRACE_URL = 'https://chatgpt.com/cdn-cgi/trace';
+const GPT_RISK_URL = 'https://ip.net.coffee/api/iprisk/';
 
 function parseIntel(body) {
   try {
@@ -21,6 +23,11 @@ function parseExitIp(body) {
   } catch {
     return text;
   }
+}
+
+function parseTraceIp(body) {
+  const matched = String(body || '').match(/^ip=([^\r\n]+)$/m);
+  return matched ? matched[1].trim() : '';
 }
 
 function statusLabel(name, status) {
@@ -42,6 +49,7 @@ async function mapLimit(items, limit, task) {
 
 export function createSubStoreOperator({ httpGet, produce, serialize, uploadSnapshot, cache, now = () => Date.now(), concurrency = 5 }) {
   const intelByIp = new Map();
+  const gptRiskByIp = new Map();
 
   async function getIntel(ip) {
     if (intelByIp.has(ip)) return intelByIp.get(ip);
@@ -57,6 +65,39 @@ export function createSubStoreOperator({ httpGet, produce, serialize, uploadSnap
     })();
     intelByIp.set(ip, task);
     return task;
+  }
+
+  async function getGptIntel(descriptor) {
+    let trace;
+    try {
+      trace = await httpGet({
+        url: CHATGPT_TRACE_URL,
+        node: descriptor,
+        'policy-descriptor': descriptor,
+        timeout: 10000,
+      });
+    } catch {
+      return {};
+    }
+    const chatgptExitIp = parseTraceIp(trace?.body);
+    if (!chatgptExitIp) return {};
+    if (!gptRiskByIp.has(chatgptExitIp)) {
+      gptRiskByIp.set(chatgptExitIp, (async () => {
+        const cacheKey = `surge-ip-labeler:gpt-risk:${chatgptExitIp}`;
+        const cached = cache.get(cacheKey);
+        if (cached?.expiresAt > now() && cached.intel) return cached.intel;
+        try {
+          const response = await httpGet({ url: `${GPT_RISK_URL}${encodeURIComponent(chatgptExitIp)}`, timeout: 10000 });
+          const score = Number(parseIntel(response.body).trust_score);
+          const intel = Number.isFinite(score) && score >= 0 && score <= 100 ? { gpt_trust_score: score } : {};
+          cache.set(cacheKey, { expiresAt: now() + DAY_MS, intel });
+          return intel;
+        } catch {
+          return {};
+        }
+      })());
+    }
+    return gptRiskByIp.get(chatgptExitIp);
   }
 
   return async function operator(proxies = []) {
@@ -93,11 +134,10 @@ export function createSubStoreOperator({ httpGet, produce, serialize, uploadSnap
         return proxy;
       }
 
-      try {
-        proxy.name = formatLabel(originalName, ip, await getIntel(ip));
-      } catch {
-        proxy.name = formatLabel(originalName, ip, {});
-      }
+      const [intelResult, gptResult] = await Promise.allSettled([getIntel(ip), getGptIntel(descriptor)]);
+      const intel = intelResult.status === 'fulfilled' ? intelResult.value : {};
+      const gptIntel = gptResult.status === 'fulfilled' ? gptResult.value : {};
+      proxy.name = formatLabel(originalName, ip, { ...intel, ...gptIntel });
       return proxy;
     });
 

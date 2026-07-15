@@ -7,6 +7,8 @@ const $ = $substore;
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 const EXIT_IP_URL = 'http://ip-api.com/json?fields=status,query';
 const INTEL_URL = 'https://ip.net.coffee/api/ip/lookup/';
+const CHATGPT_TRACE_URL = 'https://chatgpt.com/cdn-cgi/trace';
+const GPT_RISK_URL = 'https://ip.net.coffee/api/iprisk/';
 const concurrency = Math.min(10, Math.max(1, Number($arguments?.limit) || 5));
 const syncUrl = String($arguments?.sync_url || '').trim();
 const syncToken = String($arguments?.sync_token || '').trim();
@@ -51,11 +53,9 @@ function abuseHistory(intel) {
 }
 
 function gptScore(intel) {
-  const confidence = Number(intel?.ai_verdict?.confidence);
-  const verdict = typeof intel?.ai_verdict?.label === 'string' ? intel.ai_verdict.label.trim() : '';
-  if (!Number.isFinite(confidence)) return '';
-  const display = Number.isInteger(confidence) ? String(confidence) : String(confidence);
-  return verdict ? `GPT评分:${display} (${verdict})` : `GPT评分:${display}`;
+  const score = Number(intel?.gpt_trust_score);
+  if (!Number.isFinite(score) || score < 0 || score > 100) return '';
+  return `GPT评分:${Number.isInteger(score) ? score : score}`;
 }
 
 function label(name, ip, intel) {
@@ -97,11 +97,17 @@ function parseExitIp(body) {
   }
 }
 
+function parseTraceIp(body) {
+  const matched = String(body || '').match(/^ip=([^\r\n]+)$/m);
+  return matched ? matched[1].trim() : '';
+}
+
 async function operator(proxies = []) {
   if (!$.env.isSurge) throw new Error('此操作脚本仅适用于 Sub-Store 的 Surge-ability 模块');
 
   const cache = scriptResourceCache;
   const pendingIntel = new Map();
+  const pendingGptRisk = new Map();
   let cursor = 0;
 
   async function getIntel(ip) {
@@ -117,6 +123,39 @@ async function operator(proxies = []) {
     })();
     pendingIntel.set(ip, task);
     return task;
+  }
+
+  async function getGptIntel(descriptor) {
+    let trace;
+    try {
+      trace = await $.http.get({
+        url: CHATGPT_TRACE_URL,
+        node: descriptor,
+        'policy-descriptor': descriptor,
+        timeout: 10000,
+      });
+    } catch {
+      return {};
+    }
+    const chatgptExitIp = parseTraceIp(trace?.body);
+    if (!chatgptExitIp) return {};
+    if (!pendingGptRisk.has(chatgptExitIp)) {
+      pendingGptRisk.set(chatgptExitIp, (async () => {
+        const cacheKey = `surge-ip-labeler:gpt-risk:${chatgptExitIp}`;
+        const cached = cache.get(cacheKey);
+        if (cached?.expiresAt > Date.now() && cached.intel) return cached.intel;
+        try {
+          const response = await $.http.get({ url: `${GPT_RISK_URL}${encodeURIComponent(chatgptExitIp)}`, timeout: 10000 });
+          const score = Number(parseIntel(response.body).trust_score);
+          const intel = Number.isFinite(score) && score >= 0 && score <= 100 ? { gpt_trust_score: score } : {};
+          cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL, intel });
+          return intel;
+        } catch {
+          return {};
+        }
+      })());
+    }
+    return pendingGptRisk.get(chatgptExitIp);
   }
 
   async function inspect(proxy) {
@@ -152,11 +191,10 @@ async function operator(proxies = []) {
       return proxy;
     }
 
-    try {
-      proxy.name = label(original, ip, await getIntel(ip));
-    } catch {
-      proxy.name = label(original, ip, {});
-    }
+    const [intelResult, gptResult] = await Promise.allSettled([getIntel(ip), getGptIntel(descriptor)]);
+    const intel = intelResult.status === 'fulfilled' ? intelResult.value : {};
+    const gptIntel = gptResult.status === 'fulfilled' ? gptResult.value : {};
+    proxy.name = label(original, ip, { ...intel, ...gptIntel });
     return proxy;
   }
 

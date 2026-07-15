@@ -31,7 +31,7 @@ test('labels Sub-Store proxies by querying each proxy exit and Net.Coffee', asyn
     'policy-descriptor': ['descriptor:IPLC 香港 01'],
     timeout: 10000,
   });
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
 });
 
 test('uses one cached intelligence lookup for duplicate exit IPs', async () => {
@@ -44,7 +44,7 @@ test('uses one cached intelligence lookup for duplicate exit IPs', async () => {
       if (options.url === 'http://ip-api.com/json?fields=status,query') {
         return { body: JSON.stringify({ status: 'success', query: '203.0.113.8' }) };
       }
-      intelCalls += 1;
+      if (options.url === 'https://ip.net.coffee/api/ip/lookup/203.0.113.8') intelCalls += 1;
       return { body: JSON.stringify({ trust_score: 80 }) };
     },
   });
@@ -110,4 +110,21 @@ test('uploads one complete labelled snapshot after processing every proxy', asyn
   assert.match(uploads[0].content, /A \[203\.0\.113\.8\]/);
   assert.deepEqual(uploads[0].summary, { nodeCount: 1, failedCount: 0 });
   assert.equal(uploads[0].updatedAt, '1970-01-01T00:00:01.000Z');
+});
+
+test('adds GPT score from the ChatGPT-visible exit rather than the normal IP classification confidence', async () => {
+  const operator = createSubStoreOperator({
+    produce: () => ['descriptor:node'],
+    cache: new Map(),
+    httpGet: async ({ url }) => {
+      if (url === 'http://ip-api.com/json?fields=status,query') return { body: '{"status":"success","query":"203.0.113.8"}' };
+      if (url === 'https://ip.net.coffee/api/ip/lookup/203.0.113.8') return { body: '{"trust_score":92}' };
+      if (url === 'https://chatgpt.com/cdn-cgi/trace') return { body: 'fl=1\nip=198.51.100.9\nloc=US\n' };
+      if (url === 'https://ip.net.coffee/api/iprisk/198.51.100.9') return { body: '{"trust_score":68}' };
+      throw new Error(`unexpected ${url}`);
+    },
+  });
+
+  const [proxy] = await operator([{ name: 'GPT 节点' }]);
+  assert.equal(proxy.name, 'GPT 节点 [203.0.113.8] | 🟢92 | GPT评分:68');
 });
