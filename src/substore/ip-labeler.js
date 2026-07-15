@@ -40,7 +40,7 @@ async function mapLimit(items, limit, task) {
   return result;
 }
 
-export function createSubStoreOperator({ httpGet, produce, cache, now = () => Date.now(), concurrency = 5 }) {
+export function createSubStoreOperator({ httpGet, produce, serialize, uploadSnapshot, cache, now = () => Date.now(), concurrency = 5 }) {
   const intelByIp = new Map();
 
   async function getIntel(ip) {
@@ -60,7 +60,7 @@ export function createSubStoreOperator({ httpGet, produce, cache, now = () => Da
   }
 
   return async function operator(proxies = []) {
-    return mapLimit(proxies, concurrency, async (proxy) => {
+    const result = await mapLimit(proxies, concurrency, async (proxy) => {
       const originalName = String(proxy.name || '未命名节点');
       let descriptor;
       try {
@@ -100,5 +100,15 @@ export function createSubStoreOperator({ httpGet, produce, cache, now = () => Da
       }
       return proxy;
     });
+
+    if (serialize && uploadSnapshot) {
+      const failedCount = result.filter((proxy) => /\[(节点描述符失败|出口请求失败|出口响应无IP)\]/.test(String(proxy.name))).length;
+      await uploadSnapshot({
+        content: serialize(result),
+        updatedAt: new Date(now()).toISOString(),
+        summary: { nodeCount: result.length, failedCount },
+      });
+    }
+    return result;
   };
 }

@@ -90,3 +90,24 @@ test('keeps the exit IP when only Net.Coffee fails', async () => {
   const [proxy] = await operator([{ name: '仅情报失败' }]);
   assert.equal(proxy.name, '仅情报失败 [203.0.113.9] | 评分未知 | 原生未知 | 住宅未知 | 人类未知');
 });
+
+test('uploads one complete labelled snapshot after processing every proxy', async () => {
+  const uploads = [];
+  const operator = createSubStoreOperator({
+    produce: ([proxy]) => [`descriptor:${proxy.name}`],
+    serialize: (proxies) => proxies.map((proxy) => `${proxy.name} = ss, host, 443`).join('\n'),
+    uploadSnapshot: async (snapshot) => uploads.push(snapshot),
+    cache: new Map(),
+    now: () => 1_000,
+    httpGet: async ({ url }) => url.includes('ip-api.com')
+      ? { body: '{"status":"success","query":"203.0.113.8"}' }
+      : { body: '{"trust_score":92}' },
+  });
+
+  await operator([{ name: 'A' }]);
+
+  assert.equal(uploads.length, 1);
+  assert.match(uploads[0].content, /A \[203\.0\.113\.8\]/);
+  assert.deepEqual(uploads[0].summary, { nodeCount: 1, failedCount: 0 });
+  assert.equal(uploads[0].updatedAt, '1970-01-01T00:00:01.000Z');
+});

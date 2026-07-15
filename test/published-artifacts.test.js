@@ -23,6 +23,9 @@ test('published artifacts contain no credentials or real source subscription URL
   assert.ok(subStoreScript, 'site must publish the Sub-Store operator');
   assert.match(subStoreScript.content, /async function operator\(proxies = \[\]/);
   assert.doesNotMatch(subStoreScript.content, /^import\s/m);
+  assert.match(subStoreScript.content, /sync_url/);
+  assert.match(subStoreScript.content, /sync_token/);
+  assert.match(subStoreScript.content, /ProxyUtils\.produce\(proxies, 'Surge'\)/);
   for (const { path, content } of artifacts) {
     assert.doesNotMatch(content, /\b(?:password|uuid|token)=/i, `${path} exposes a credential parameter`);
     assert.doesNotMatch(

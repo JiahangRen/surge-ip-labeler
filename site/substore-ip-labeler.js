@@ -8,6 +8,8 @@ const CACHE_TTL = 24 * 60 * 60 * 1000;
 const EXIT_IP_URL = 'http://ip-api.com/json?fields=status,query';
 const INTEL_URL = 'https://ip.net.coffee/api/ip/lookup/';
 const concurrency = Math.min(10, Math.max(1, Number($arguments?.limit) || 5));
+const syncUrl = String($arguments?.sync_url || '').trim();
+const syncToken = String($arguments?.sync_token || '').trim();
 
 function value(intel, ...keys) {
   for (const key of keys) if (intel?.[key] !== undefined && intel[key] !== null) return intel[key];
@@ -121,9 +123,34 @@ async function operator(proxies = []) {
     return proxy;
   }
 
+  async function uploadSnapshot() {
+    if (!syncUrl && !syncToken) return;
+    if (!syncUrl || !syncToken) throw new Error('同步配置不完整');
+
+    const rendered = ProxyUtils.produce(proxies, 'Surge');
+    const content = (Array.isArray(rendered) ? rendered.join('\n') : String(rendered || '')).trim();
+    if (!content) throw new Error('无法生成 Surge 节点文本');
+
+    const failedCount = proxies.filter((proxy) => /\[(节点描述符失败|出口请求失败|出口响应无IP)\]/.test(String(proxy.name))).length;
+    await $.http.post({
+      url: syncUrl,
+      headers: {
+        Authorization: `Bearer ${syncToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content,
+        updatedAt: new Date().toISOString(),
+        summary: { nodeCount: proxies.length, failedCount },
+      }),
+      timeout: 10000,
+    });
+  }
+
   const workers = Array.from({ length: Math.min(concurrency, proxies.length) }, async () => {
     while (cursor < proxies.length) await inspect(proxies[cursor++]);
   });
   await Promise.all(workers);
+  await uploadSnapshot();
   return proxies;
 }
