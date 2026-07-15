@@ -1,0 +1,6 @@
+#!name=Surge IP Labeler iOS
+#!desc=Adds an isolated IP-labelled policy group for Surge iOS testing.
+#!arguments=ios_read_token=REQUIRED_IOS_READ_TOKEN
+
+[Proxy Group]
+🧪 IP 标签 iOS = select, policy-path=https://ip-labeler.renjiahang1201.xyz/v1/ios-policy?token=%ios_read_token%, update-interval=3600

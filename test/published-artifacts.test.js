@@ -27,7 +27,11 @@ test('published artifacts contain no credentials or real source subscription URL
   assert.match(subStoreScript.content, /sync_token/);
   assert.match(subStoreScript.content, /ProxyUtils\.produce\(proxies, 'Surge'\)/);
   for (const { path, content } of artifacts) {
-    assert.doesNotMatch(content, /\b(?:password|uuid|token)=/i, `${path} exposes a credential parameter`);
+    assert.doesNotMatch(
+      content,
+      /\b(?:password|uuid|token)=(?!%ios_read_token%(?:,|\s|$))/i,
+      `${path} exposes a credential parameter`,
+    );
     assert.doesNotMatch(
       content,
       /\bsource_url=https?:\/\/(?!example\.com(?:\/|$)|[^/]+\.invalid(?:\/|$))/i,
