@@ -52,16 +52,6 @@
 
 节点会显示为：`IPLC 香港 01 [203.0.113.8] | 🟢92 | 原生IP | 住宅 | 人类偏多`。同一出口 IP 的 Net.Coffee 结果缓存 24 小时。
 
-## iOS 独立测试
-
-此流程不修改 macOS 的本地镜像、Keychain、`ip-labels.conf` 或任何现有策略组。
-
-1. 在 Worker 项目目录执行 `wrangler secret put IOS_READ_TOKEN`，为 iPhone 创建一个新的随机读取令牌。不要复用 `READ_TOKEN`，也不要把令牌发到聊天、截图或仓库。
-2. 在 Surge iOS 通过 URL 安装模块：`https://jiahangren.github.io/surge-ip-labeler/ios-ip-labeler.sgmodule`。
-3. 安装时仅填写 `ios_read_token=你的_iOS_读取令牌`，然后应用模块。模块只创建 `🧪 IP 标签 iOS`，不会改动“手动切换”、自动选优或原订阅。
-4. 打开 `🧪 IP 标签 iOS` 并更新外部资源，确认节点名称、完整 IP、评分和延迟测试正常。资源每小时只下载一次已完成快照；不会触发新的 IP 扫描。
-5. 若要回退，禁用或删除该模块即可。原有 macOS 本地镜像和策略组不受影响。
-
 ## 旧 Worker 方案
 
 旧的 Surge 定时扫描模块不再需要。Worker 只保存已完成的 Sub-Store 快照；应禁用旧的 **Surge IP Labeler** 模块，避免它对 Worker 写入旧结果。

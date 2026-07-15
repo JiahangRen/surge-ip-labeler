@@ -20,14 +20,3 @@ test('publishes a self-contained Surge module and script at the GitHub Pages URL
   assert.match(scriptText, /\$notification\.post\('Surge IP Labeler', '开始扫描', '正在拉取订阅并检测出口 IP'\)/);
   assert.match(scriptText, /runInSurge\(\)\.then\(\(\) => \$done\(\)\)\.catch\(\(error\) =>/);
 });
-
-test('publishes an isolated iOS test module through the custom domain', async () => {
-  const iosModule = await readFile(new URL('../site/ios-ip-labeler.sgmodule', import.meta.url), 'utf8');
-
-  assert.match(iosModule, /^#!arguments=ios_read_token=REQUIRED_IOS_READ_TOKEN$/m);
-  assert.match(
-    iosModule,
-    /^🧪 IP 标签 iOS = select, policy-path=https:\/\/ip-labeler\.renjiahang1201\.xyz\/v1\/ios-policy\?token=%ios_read_token%, update-interval=3600$/m,
-  );
-  assert.doesNotMatch(iosModule, /\[Script\]|🔄 手动切换|SYNC_TOKEN|(?<!IOS_)READ_TOKEN/);
-});
