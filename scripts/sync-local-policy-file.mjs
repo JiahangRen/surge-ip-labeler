@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 
 import { buildValidationProfile, syncSnapshot } from '../src/local/policy-mirror.js';
 import { downloadSnapshot } from '../src/local/download.js';
+import { resolveKeychainAccount } from '../src/local/keychain.js';
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_ENDPOINT = 'https://ip-labeler.renjiahang1201.xyz/v1/subscription';
@@ -18,6 +19,7 @@ function usage() {
 Options:
   --endpoint <url>       Worker subscription endpoint (default: ${DEFAULT_ENDPOINT})
   --keychain-service <s> macOS Keychain service (default: ${DEFAULT_SERVICE})
+  --keychain-account <s> macOS Keychain account (default: current user)
   --surge-cli <path>     surge-cli executable (default: /opt/homebrew/bin/surge-cli)
 `;
 }
@@ -37,10 +39,10 @@ function readArgs(argv) {
   return args;
 }
 
-async function keychainToken(service) {
+async function keychainToken(service, account) {
   const { stdout } = await execFileAsync('/usr/bin/security', [
     'find-generic-password',
-    '-a', process.env.USER || process.env.LOGNAME || '',
+    '-a', resolveKeychainAccount({ explicitAccount: account }),
     '-s', service,
     '-w',
   ]);
@@ -81,7 +83,7 @@ async function main() {
 
   const endpoint = args.endpoint || DEFAULT_ENDPOINT;
   const surgeCli = args['surge-cli'] || '/opt/homebrew/bin/surge-cli';
-  const token = await keychainToken(args['keychain-service'] || DEFAULT_SERVICE);
+  const token = await keychainToken(args['keychain-service'] || DEFAULT_SERVICE, args['keychain-account']);
   const url = new URL(endpoint);
   url.searchParams.set('token', token);
 
